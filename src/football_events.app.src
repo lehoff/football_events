@@ -1,0 +1,13 @@
+{application, football_events, [
+	{description, ""},
+	{vsn, "0.0.1"},
+	{modules, []},
+	{registered, []},
+	{applications, [
+		kernel,
+		stdlib,
+                gproc
+	]},
+	{mod, {fe_app, []}},
+	{env, []}
+]}.

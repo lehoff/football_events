@@ -5,7 +5,8 @@
 -export([start_link/4]).
 
 -export([tick/1,
-         status/1]).
+         status/1,
+         teams/1]).
 
 %% states
 -export([starts_in/2, starts_in/3,
@@ -58,6 +59,9 @@ tick(MatchId) ->
 status(MatchId) ->
   gen_fsm:sync_send_all_state_event({via, gproc, process_name(MatchId)}, status).
 
+-spec teams(match_id()) -> {string(), string()}.
+teams(MatchId) ->
+  gen_fsm:sync_send_all_state_event({via, gproc, process_name(MatchId)}, teams).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init([MatchId, {HomeName, {AlphaH, BetaH}}, {AwayName, {AlphaA, BetaA}}, StartsIn]) ->
@@ -143,6 +147,10 @@ handle_sync_event(status, _From, halftime, {N, S}) ->
   {reply, Reply, halftime, {N,S}};
 handle_sync_event(status, _From, StateName, S) ->
   Reply = fe_mmatch:status(S#state.match),
+  {reply, Reply, StateName, S};
+
+handle_sync_event(teams, _From, StateName, S) ->
+  Reply = {S#state.home_name, S#state.away_name},
   {reply, Reply, StateName, S}.
 
 handle_event(_Event, _StateName, State) ->

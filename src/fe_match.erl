@@ -105,7 +105,8 @@ halftime(tick, {0, #state{match=M}=S}) ->
   broadcast_status(S#state.match_id, fe_mmatch:status(NewM)),
   {next_state, second_half, NewS};
 halftime(tick, {N, #state{match=M}=S}) ->
-  Status = {halftime, N-1, fe_mmatch:status(M)},
+  {halftime, Score} = fe_mmatch:status(M),
+  Status = {halftime, N - 1, Score},
   broadcast_status(S#state.match_id, Status),
   {next_state, halftime, {N-1, S}}.
 
@@ -113,8 +114,8 @@ second_half(tick, #state{match=M}=S) ->
   NewM = fe_mmatch:tick(M),
   NewS = S#state{match=NewM},
   case fe_mmatch:status(NewM) of
-    {finished, Score} ->
-      Status = {halftime, 15, Score},
+    {finished, _Score} = Status ->
+      fe_bcast:unsubscribe_tick(),
       broadcast_status(S#state.match_id, Status),
       {next_state, finished, NewS};
     Status ->

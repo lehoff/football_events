@@ -10,5 +10,7 @@ start_link() ->
 init([]) ->
   MatchSup = {fe_match_sup, {fe_match_sup, start_link, []},
               transient, infinity, supervisor, [fe_match_sup]},
-  Procs = [MatchSup],
+  Ticks = {fe_ticks, {fe_ticks, start_link, []},
+           permanent, brutal_kill, worker, [fe_ticks]},
+  Procs = [MatchSup, Ticks],
   {ok, {{one_for_one, 1, 5}, Procs}}.

@@ -5,7 +5,8 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
-	fe_sup:start_link().
+  fe_match_id:init(),
+  fe_sup:start_link().
 
 stop(_State) ->
-	ok.
+  ok.

@@ -8,6 +8,8 @@
          status/1,
          teams/1]).
 
+-export([broadcast_status/2]).
+
 %% states
 -export([starts_in/2, starts_in/3,
          first_half/2, first_half/3,
@@ -68,7 +70,8 @@ init([MatchId, {HomeName, {AlphaH, BetaH}}, {AwayName, {AlphaA, BetaA}}, StartsI
   Lambda = AlphaH * BetaA/90,
   Mu     = AlphaA * BetaH/90,
   Match = fe_mmatch:new(Lambda, Mu),
-  broadcast_status({starts_in, StartsIn}),
+  fe_bcast:subscribe_tick(),
+  broadcast_status(MatchId, {starts_in, StartsIn}),
   {ok, starts_in,
    {StartsIn, #state{match_id = MatchId, 
                      home_name = HomeName,
@@ -77,10 +80,10 @@ init([MatchId, {HomeName, {AlphaH, BetaH}}, {AwayName, {AlphaA, BetaA}}, StartsI
 
 starts_in(tick, {0, #state{}=S}) ->
   Status = fe_mmatch:status(S#state.match),
-  broadcast_status(Status),
+  broadcast_status(S#state.match_id, Status),
   {next_state, first_half, S};
 starts_in(tick, {N,  #state{}=S}) ->
-  broadcast_status({starts_in, N - 1}),
+  broadcast_status(S#state.match_id, {starts_in, N - 1}),
   {next_state, starts_in, {N-1, S}}.
 
 first_half(tick, #state{match=M}=S) ->
@@ -89,21 +92,21 @@ first_half(tick, #state{match=M}=S) ->
   case fe_mmatch:status(NewM) of
     {halftime, Score} ->
       Status = {halftime, 15, Score},
-      broadcast_status(Status),
+      broadcast_status(S#state.match_id, Status),
       {next_state, halftime, {15, NewS}};
     Status ->
-      broadcast_status(Status),
+      broadcast_status(S#state.match_id, Status),
       {next_state, first_half, NewS}
   end.
 
 halftime(tick, {0, #state{match=M}=S}) ->
   NewM = fe_mmatch:tick(M),
   NewS = S#state{match=NewM},
-  broadcast_status(fe_mmatch:status(NewM)),
+  broadcast_status(S#state.match_id, fe_mmatch:status(NewM)),
   {next_state, second_half, NewS};
 halftime(tick, {N, #state{match=M}=S}) ->
   Status = {halftime, N-1, fe_mmatch:status(M)},
-  broadcast_status(Status),
+  broadcast_status(S#state.match_id, Status),
   {next_state, halftime, {N-1, S}}.
 
 second_half(tick, #state{match=M}=S) ->
@@ -112,10 +115,10 @@ second_half(tick, #state{match=M}=S) ->
   case fe_mmatch:status(NewM) of
     {finished, Score} ->
       Status = {halftime, 15, Score},
-      broadcast_status(Status),
+      broadcast_status(S#state.match_id, Status),
       {next_state, finished, NewS};
     Status ->
-      broadcast_status(Status),
+      broadcast_status(S#state.match_id, Status),
       {next_state, second_half, NewS}
   end.
 
@@ -149,6 +152,9 @@ handle_sync_event(status, _From, StateName, S) ->
   Reply = fe_mmatch:status(S#state.match),
   {reply, Reply, StateName, S};
 
+handle_sync_event(teams, _From, StateName, {N, S}) ->
+  Reply = {S#state.home_name, S#state.away_name},
+  {reply, Reply, StateName, {N, S}};
 handle_sync_event(teams, _From, StateName, S) ->
   Reply = {S#state.home_name, S#state.away_name},
   {reply, Reply, StateName, S}.
@@ -157,8 +163,13 @@ handle_event(_Event, _StateName, State) ->
   {stop, not_implemented, State}.
 
 
-handle_info(_Info, _StateName, State) ->
-  {stop, not_implemented, State}.
+handle_info(tick, StateName, {N,S}) ->
+  fe_match:tick(S#state.match_id),
+  {next_state, StateName, {N,S}};
+handle_info(tick, StateName, S) ->
+  fe_match:tick(S#state.match_id),
+  {next_state, StateName, S}.
+
 
 
 
@@ -171,11 +182,17 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Helper functions
 
-broadcast_status(_Status) ->
-  ok.
+broadcast_status(MatchId, Status) ->
+  fe_bcast:status(MatchId, Status).
 
 test(1) ->
   start_link(1, 
              {"ManU", {2.4,0.3}},
              {"ManC", {2.7,0.45}},
+             10);
+test({new_id, N}) ->
+  start_link(N, 
+             {"ManU", {2.4,0.3}},
+             {"ManC", {2.7,0.45}},
              10).
+

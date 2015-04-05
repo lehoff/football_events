@@ -2,6 +2,7 @@
 
 -export([status/2]).
 -export([subscribe_tick/0,
+         unsubscribe_tick/0,
          tick/0]).
 
 status(MatchId, Status) ->
@@ -10,6 +11,9 @@ status(MatchId, Status) ->
 
 subscribe_tick() ->
   gproc:reg({p, l, fe_ticks}).
+
+unsubscribe_tick() ->
+  gproc:unreg({p, l, fe_ticks}).
 
 tick() ->
   gproc:send({p, l, fe_ticks}, tick).

@@ -14,4 +14,4 @@ stop(_State) ->
 
 seed() ->
   {A, B, C} = now(),
-  random:need(A, B, C).
+  random:seed(A, B, C).

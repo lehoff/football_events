@@ -25,7 +25,8 @@ new_match() ->
   fe_match_sup:start_match(MatchId, 
                            {Home, HomeStrength},
                            {Away, AwayStrength},
-                           StartsIn).
+                           StartsIn),
+  MatchId.
   
 %% @doc returns a list of match ids
 matches() ->

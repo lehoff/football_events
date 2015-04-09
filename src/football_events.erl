@@ -45,10 +45,24 @@ match_info(MatchId) ->
 %% @doc subscribes the calling process to match_info events from the MatchId match.
 %% The info has the shape {match_info, match_id()}, status()}. 
 subscribe(MatchId) ->
-  gproc:reg({p, l, {match_info, MatchId}}).
+  case gproc:lookup_local_properties({match_info,MatchId}) of
+    [] ->
+      gproc:reg({p, l, {match_info, MatchId}}),
+      ok;
+    _ ->
+      ok
+  end.
+
 
 unsubscribe(MatchId) ->
-  gproc:unreg({p, l, {match_info, MatchId}}).
+  case gproc:lookup_local_properties({match_info,MatchId}) of
+    [] ->
+      ok;
+    _ ->
+      gproc:unreg({p, l, {match_info, MatchId}}),
+      ok
+  end.
+
 
 
 %% @doc start the ticks that drives forward the matches.

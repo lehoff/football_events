@@ -1,4 +1,4 @@
-defmodule Exgol.Mixfile do
+defmodule FootballEvents.Mixfile do
   use Mix.Project
 
   def project do
